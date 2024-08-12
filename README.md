@@ -1,71 +1,67 @@
-# Getting Started with Create React App
+Great! Moving to a MySQL database for storing transcripts will provide more robustness, scalability, and persistence. Let's go through the process step by step.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Step 1: Setting Up MySQL
+1.1. Install MySQL:
+If MySQL is not already installed, you can install it using the following command:
+bash
+Copy code
+sudo apt-get update
+sudo apt-get install mysql-server
+Start the MySQL service:
+bash
+Copy code
+sudo service mysql start
+1.2. Secure MySQL Installation:
+Run the following command to secure your MySQL installation:
+bash
+Copy code
+sudo mysql_secure_installation
+Follow the prompts to set the root password and remove insecure default settings.
+1.3. Log in to MySQL:
+Log in to the MySQL shell:
+bash
+Copy code
+mysql -u root -p
+1.4. Create a Database:
+Create a new database for storing the transcripts:
+sql
+Copy code
+CREATE DATABASE learning_assistant_db;
+Switch to the newly created database:
+sql
+Copy code
+USE learning_assistant_db;
+1.5. Create a Table:
+Create a table to store the transcripts. The table can store the video ID, transcript text, and any other relevant data:
+sql
+Copy code
+CREATE TABLE transcripts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    video_id VARCHAR(255) NOT NULL,
+    transcript TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+Step 2: Set Up a Node.js Backend with Express
+2.1. Initialize a Node.js Project:
+Navigate to your project directory and initialize a Node.js project:
+bash
+Copy code
+mkdir learning-assistant-backend
+cd learning-assistant-backend
+npm init -y
+2.2. Install Required Packages:
+Install the following packages:
+bash
+Copy code
+npm install express mysql2 body-parser cors
+Express: For creating the server.
+MySQL2: For interacting with MySQL.
+Body-Parser: To parse incoming request bodies.
+CORS: To handle cross-origin requests.
+2.3. Set Up the Express Server:
+Create an index.js file for your Express server:
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
-
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-# mycode
+bash
+Copy code
+touch index.js
+Add the following code to index.js to set up a basic server and connect to MySQL
