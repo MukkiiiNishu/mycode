@@ -65,3 +65,101 @@ bash
 Copy code
 touch index.js
 Add the following code to index.js to set up a basic server and connect to MySQL
+
+
+To ensure your project runs smoothly, here are all the dependencies you need to install for both the frontend (React) and backend (Node.js) parts of the project.
+
+Frontend (React) Dependencies
+These dependencies are required for the frontend part of your project:
+
+React and React DOM:
+
+These are the core libraries for building the UI.
+bash
+Copy code
+npm install react react-dom
+Styled-Components:
+
+This is used for styling components in a modular and reusable way.
+bash
+Copy code
+npm install styled-components
+Axios:
+
+Axios is used for making HTTP requests to the backend.
+bash
+Copy code
+npm install axios
+GlobalStyles (if used):
+
+If you’re using a global styling approach, ensure you have a GlobalStyles.js file or equivalent in your styles directory.
+Backend (Node.js) Dependencies
+These dependencies are required for the backend part of your project:
+
+Express:
+
+A minimal and flexible Node.js web application framework.
+bash
+Copy code
+npm install express
+Cors:
+
+Middleware for handling Cross-Origin Resource Sharing (CORS), making it possible for your frontend to communicate with your backend.
+bash
+Copy code
+npm install cors
+Multer:
+
+A middleware for handling multipart/form-data, which is used for file uploads.
+bash
+Copy code
+npm install multer
+Fluent-FFmpeg:
+
+A fluent API for working with FFmpeg, used to extract audio from video files.
+bash
+Copy code
+npm install fluent-ffmpeg
+MySQL2:
+
+A MySQL client for Node.js with support for modern features like Promises.
+bash
+Copy code
+npm install mysql2
+Child Process (Built-in):
+
+You don’t need to install this separately as it’s a built-in module in Node.js, used for running shell commands (e.g., calling the Python transcription script).
+It’s used as:
+javascript
+Copy code
+const { execSync } = require('child_process');
+Python (for Whisper):
+
+Make sure Python is installed on your server/system.
+Install Whisper (for transcription):
+bash
+Copy code
+pip install git+https://github.com/openai/whisper.git
+FFmpeg:
+
+Install FFmpeg on your server/system to handle audio extraction from video files.
+Installation varies by platform, but here’s how you can install it on Ubuntu:
+bash
+Copy code
+sudo apt-get install ffmpeg
+Final Notes
+Backend Startup:
+
+Ensure your MySQL server is running and the necessary tables are created before starting the backend.
+Start the backend using:
+bash
+Copy code
+node index.js
+Frontend Startup:
+
+Run the React development server using:
+bash
+Copy code
+npm start
+Summary
+With these dependencies installed, your project should be fully operational. The frontend handles video uploads and interacts with the backend, while the backend processes the video, performs transcription, and stores the transcript in MySQL.
