@@ -5,6 +5,7 @@ from moviepy.editor import VideoFileClip
 import os
 import subprocess
 import uuid
+import openai
 
 app = Flask(__name__)
 CORS(app)
@@ -19,13 +20,15 @@ db = mysql.connector.connect(
 
 cursor = db.cursor()
 
+# Set up OpenAI API key
+openai.api_key = 'your-openai-api-key'  # Replace with your OpenAI API key
+
 # Function to extract audio from video and save it as a .wav file
 def extract_audio(video_path, audio_path):
     try:
-        print("Hi Working")
-        # clip = VideoFileClip(video_path)
-        # clip.audio.write_audiofile(audio_path)
-        # clip.close()
+        clip = VideoFileClip(video_path)
+        clip.audio.write_audiofile(audio_path)
+        clip.close()
     except Exception as e:
         print(f"Error extracting audio: {e}")
         return False
@@ -34,9 +37,8 @@ def extract_audio(video_path, audio_path):
 # Function to transcribe audio using Whisper
 def transcribe_audio(audio_path):
     try:
-        # result = subprocess.run(['python3', 'transcribe.py', audio_path], stdout=subprocess.PIPE)
-        # transcript = result.stdout.decode('utf-8').strip()
-        transcript="Hi success"
+        result = subprocess.run(['python3', 'transcribe.py', audio_path], stdout=subprocess.PIPE)
+        transcript = result.stdout.decode('utf-8').strip()
         return transcript
     except Exception as e:
         print(f"Error during transcription: {e}")
@@ -72,6 +74,35 @@ def upload_video():
         return jsonify({"transcript": transcript})
     else:
         return jsonify({"error": "Failed to transcribe audio"}), 500
+
+# API endpoint to handle chat messages
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.json
+    message = data.get('message')
+    transcript = data.get('transcript')
+
+    if not message or not transcript:
+        return jsonify({"error": "Message and transcript are required."}), 400
+
+    # Prepare the conversation context
+    context = f"{transcript}\n\nUser: {message}"
+
+    try:
+        # Call the OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": context}
+            ]
+        )
+        assistant_response = response.choices[0].message['content']
+
+        return jsonify({"response": assistant_response})
+    except Exception as e:
+        print(f"Error during OpenAI request: {e}")
+        return jsonify({"error": "Failed to fetch response from OpenAI."}), 500
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
