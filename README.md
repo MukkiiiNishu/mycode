@@ -163,3 +163,48 @@ Copy code
 npm start
 Summary
 With these dependencies installed, your project should be fully operational. The frontend handles video uploads and interacts with the backend, while the backend processes the video, performs transcription, and stores the transcript in MySQL.
+
+
+The "Access denied for user 'root'@'localhost'" error usually occurs because MySQL's root user is configured to authenticate using the auth_socket plugin, which only allows connections via the local Unix socket and not using a password. This is common on newer installations of MySQL on Ubuntu.
+
+Step 1: Log in to MySQL as Root User Using sudo
+Since the root user might be configured to authenticate via the auth_socket plugin, you'll need to log in using sudo:
+
+bash
+Copy code
+sudo mysql -u root
+Step 2: Change the Authentication Method for the Root User
+Once you're logged in, you can change the authentication method to mysql_native_password, which allows you to use a password for the root user.
+
+Switch to MySQL Database:
+
+sql
+Copy code
+USE mysql;
+Update the Authentication Method:
+
+Run the following command to set the root user to authenticate with a password:
+
+sql
+Copy code
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'your_new_password';
+Replace 'your_new_password' with a strong password of your choice.
+
+Flush Privileges:
+
+Apply the changes by flushing the privileges:
+
+sql
+Copy code
+FLUSH PRIVILEGES;
+Exit MySQL:
+
+sql
+Copy code
+EXIT;
+Step 3: Log in Using the New Password
+Now, you should be able to log in using the password:
+
+bash
+Copy code
+mysql -u root -p
