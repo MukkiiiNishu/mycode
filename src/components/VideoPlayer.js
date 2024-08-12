@@ -48,7 +48,7 @@ function VideoPlayer({ onVideoUpload }) {
     if (file) {
       const url = URL.createObjectURL(file);
       setVideoSrc(url);
-      onVideoUpload(url); // Pass the video URL to the parent component
+      onVideoUpload(file); // Pass the video file to the parent component
     }
   };
 
