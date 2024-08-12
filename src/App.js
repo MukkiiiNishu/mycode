@@ -47,22 +47,18 @@ function App() {
   const [messages, setMessages] = useState([]);  // This state manages the chat messages
   const [apiKey, setApiKey] = useState('');  // This state manages the API key
 
-  // Function to handle the video upload and set the video source
-  const handleVideoUpload = (url) => {
-    setVideoSrc(url);
+  const handleVideoUpload = (file) => {
+    setVideoSrc(file); // Pass the file object to TranscriptUpload
   };
 
-  // Function to handle the transcript upload and set the transcript content
-  const handleTranscriptUpload = (content) => {
-    setTranscript(content);
+  const handleTranscriptFetched = (transcriptData) => {
+    setTranscript(transcriptData);
   };
 
-  // Function to clear chat history
   const handleClearChat = () => {
     setMessages([]);
   };
 
-  // Function to start a new chat
   const handleNewChat = () => {
     setMessages([]);
     setApiKey('');  // Optionally reset the API key
@@ -73,9 +69,9 @@ function App() {
       <GlobalStyles />
       <AppContainer>
         <LeftPane>
-          <h2>Learning Assistant - Learn Through Videos</h2>
+          <h2>Learning Assistant</h2>
           <VideoPlayer onVideoUpload={handleVideoUpload} />
-          <TranscriptUpload onTranscriptUpload={handleTranscriptUpload} />
+          <TranscriptUpload videoSrc={videoSrc} onTranscriptFetched={handleTranscriptFetched} />
         </LeftPane>
         <RightPane>
           <ChatWindow
