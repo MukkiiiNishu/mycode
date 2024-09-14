@@ -1,15 +1,11 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
-import openai
-import time  # For simulating delays in streaming response
 
 app = Flask(__name__)
-CORS(app)
 
-# Set up OpenAI API key
-openai.api_key = 'your-openai-api-key'  # Replace with your OpenAI API key
+# Enable CORS with specific settings
+CORS(app, resources={r"/*": {"origins": "*"}}, headers=['Content-Type'])
 
-# API endpoint to handle chat messages with SSE (Server-Sent Events)
 @app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.json
@@ -19,30 +15,27 @@ def chat():
     if not message or not transcript:
         return jsonify({"error": "Message and transcript are required."}), 400
 
-    # Prepare the conversation context
     context = f"{transcript}\n\nUser: {message}"
 
     def generate_response():
         try:
-            # Call OpenAI API (Simulated as chunked responses)
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": context}
-                ]
-            )
-            assistant_response = response.choices[0].message['content']
-            
-            # Simulating chunked responses (you can adapt this to actual chunking based on logic)
-            chunks = assistant_response.split('. ')  # Split the response into sentences or chunks
-            for i, chunk in enumerate(chunks):
-                time.sleep(1)  # Simulate delay between chunks
-                yield f"data: {chunk.strip()}. \n\n"  # SSE format: `data:` followed by the message
+            # Simulate chunked responses (for example)
+            response_chunks = ["This is the first chunk.", "Here comes the second.", "And finally, the last chunk."]
+            for i, chunk in enumerate(response_chunks):
+                print(f"Sending chunk {i+1}: {chunk}")
+                yield f"data: {chunk}\n\n"  # SSE format
         except Exception as e:
             yield f"data: Error occurred: {str(e)}\n\n"
 
     return Response(stream_with_context(generate_response()), mimetype='text/event-stream')
+
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
+
+
+
+
+
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
