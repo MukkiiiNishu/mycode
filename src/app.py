@@ -1,13 +1,17 @@
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
+import openai
+import time
 
 app = Flask(__name__)
+CORS(app)
 
-# Enable CORS with specific settings
-CORS(app, resources={r"/*": {"origins": "*"}}, headers=['Content-Type'])
+# Set up OpenAI API key
+openai.api_key = 'your-openai-api-key'  # Replace with your OpenAI API key
 
-@app.route('/api/chat', methods=['POST'])
-def chat():
+# API endpoint to handle sending the chat message via POST
+@app.route('/api/send-message', methods=['POST'])
+def send_message():
     data = request.json
     message = data.get('message')
     transcript = data.get('transcript')
@@ -15,15 +19,20 @@ def chat():
     if not message or not transcript:
         return jsonify({"error": "Message and transcript are required."}), 400
 
-    context = f"{transcript}\n\nUser: {message}"
+    # You can store or process the message here, if needed
+    return jsonify({"success": True})
 
+# API endpoint for real-time streaming via GET (SSE)
+@app.route('/api/chat', methods=['GET'])
+def chat():
     def generate_response():
         try:
-            # Simulate chunked responses (for example)
+            # Simulate chunked responses (replace with OpenAI call in production)
             response_chunks = ["This is the first chunk.", "Here comes the second.", "And finally, the last chunk."]
             for i, chunk in enumerate(response_chunks):
                 print(f"Sending chunk {i+1}: {chunk}")
-                yield f"data: {chunk}\n\n"  # SSE format
+                time.sleep(1)  # Simulate delay between chunks
+                yield f"data: {chunk}\n\n"  # SSE format: `data:` followed by the message
         except Exception as e:
             yield f"data: Error occurred: {str(e)}\n\n"
 
@@ -31,11 +40,6 @@ def chat():
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
-
-
-
-
-
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
