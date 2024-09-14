@@ -8,33 +8,39 @@ const handleSendMessage = async (message) => {
     setMessages([...messages, { role: 'assistant', content: 'Please upload the transcript for the video to proceed.' }]);
   } else {
     try {
-      // First, send the initial message via POST request
-      await axios.post('http://localhost:5000/api/send-message', {
+      // Step 1: Send the message and transcript to the backend via POST
+      const response = await axios.post('http://localhost:5000/api/send-message', {
         message: message,
         transcript: transcript
+      }, {
+        withCredentials: true  // Ensure cookies are sent with the request
       });
 
-      // Now, open the SSE connection via GET request
-      const eventSource = new EventSource('http://localhost:5000/api/chat');
+      // Step 2: Only after the POST request succeeds, start the EventSource for SSE
+      if (response.data.success) {
+        const eventSource = new EventSource('http://localhost:5000/api/chat', {
+          withCredentials: true  // Ensure cookies are sent with SSE request
+        });
 
-      // Listen to messages being sent chunk by chunk
-      eventSource.onmessage = (event) => {
-        console.log("Received event:", event);
-        console.log("Received data:", event.data);
+        // Listen to messages being sent chunk by chunk
+        eventSource.onmessage = (event) => {
+          console.log("Received event:", event);
+          console.log("Received data:", event.data);
 
-        // Append each chunk to the messages
-        setMessages((prevMessages) => [
-          ...prevMessages, 
-          { role: 'assistant', content: event.data }
-        ]);
-      };
+          // Append each chunk to the messages
+          setMessages((prevMessages) => [
+            ...prevMessages, 
+            { role: 'assistant', content: event.data }
+          ]);
+        };
 
-      // Handle errors in the EventSource connection
-      eventSource.onerror = (err) => {
-        console.error("EventSource error:", err);
-        setMessages([...messages, { role: 'assistant', content: 'Error occurred while streaming response.' }]);
-        eventSource.close();
-      };
+        // Handle errors in the EventSource connection
+        eventSource.onerror = (err) => {
+          console.error("EventSource error:", err);
+          setMessages([...messages, { role: 'assistant', content: 'Error occurred while streaming response.' }]);
+          eventSource.close();
+        };
+      }
 
     } catch (error) {
       console.error("Error fetching response from the backend:", error);
@@ -42,7 +48,6 @@ const handleSendMessage = async (message) => {
     }
   }
 };
-
 
 
 
