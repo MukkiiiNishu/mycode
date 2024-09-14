@@ -1,3 +1,36 @@
+
+@app.route('/api/chat', methods=['GET'])
+def chat():
+    global global_message, global_transcript  # Declare global variables
+
+    # Retrieve the message and transcript from global variables
+    if not global_message or not global_transcript:
+        return jsonify({"error": "Message and transcript are missing."}), 400
+
+    context = f"{global_transcript}\n\nUser: {global_message}"
+
+    def generate_response():
+        try:
+            # Simulate chunked responses
+            response_chunks = ["This is the first chunk.", "Here comes the second.", "And finally, the last chunk."]
+            for i, chunk in enumerate(response_chunks):
+                print(f"Sending chunk {i+1}: {chunk}")
+                time.sleep(1)  # Simulate delay between chunks
+                yield f"data: {chunk}\n\n"  # Send chunk as SSE data
+            
+            # Send a final marker indicating the end of the response
+            yield f"data: final_chunk_marker\n\n"
+        except Exception as e:
+            yield f"data: Error occurred: {str(e)}\n\n"
+
+    return Response(stream_with_context(generate_response()), mimetype='text/event-stream')
+
+
+
+
+
+
+
 from flask import Flask, request, jsonify, Response, stream_with_context, session
 from flask_cors import CORS
 import openai
