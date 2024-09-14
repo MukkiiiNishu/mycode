@@ -1,10 +1,13 @@
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, session
 from flask_cors import CORS
 import openai
 import time
 
 app = Flask(__name__)
 CORS(app)
+
+# Secret key for session management (needed for Flask sessions)
+app.secret_key = 'your_secret_key'
 
 # Set up OpenAI API key
 openai.api_key = 'your-openai-api-key'  # Replace with your OpenAI API key
@@ -19,20 +22,43 @@ def send_message():
     if not message or not transcript:
         return jsonify({"error": "Message and transcript are required."}), 400
 
-    # You can store or process the message here, if needed
+    # Store the message and transcript in session
+    session['message'] = message
+    session['transcript'] = transcript
+
     return jsonify({"success": True})
 
 # API endpoint for real-time streaming via GET (SSE)
 @app.route('/api/chat', methods=['GET'])
 def chat():
+    # Retrieve the message and transcript from session
+    message = session.get('message')
+    transcript = session.get('transcript')
+
+    if not message or not transcript:
+        return jsonify({"error": "Message and transcript are missing."}), 400
+
+    # Prepare the conversation context
+    context = f"{transcript}\n\nUser: {message}"
+
     def generate_response():
         try:
-            # Simulate chunked responses (replace with OpenAI call in production)
-            response_chunks = ["This is the first chunk.", "Here comes the second.", "And finally, the last chunk."]
-            for i, chunk in enumerate(response_chunks):
-                print(f"Sending chunk {i+1}: {chunk}")
+            # Call OpenAI API (Simulated as chunked responses)
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": context}
+                ]
+            )
+            assistant_response = response.choices[0].message['content']
+
+            # Simulating chunked responses (split the response into chunks)
+            chunks = assistant_response.split('. ')  # Split by sentence or period
+            for i, chunk in enumerate(chunks):
+                print(f"Sending chunk {i + 1}: {chunk.strip()}")  # Log the chunk
                 time.sleep(1)  # Simulate delay between chunks
-                yield f"data: {chunk}\n\n"  # SSE format: `data:` followed by the message
+                yield f"data: {chunk.strip()}\n\n"  # Send chunk as SSE data
         except Exception as e:
             yield f"data: Error occurred: {str(e)}\n\n"
 
@@ -40,6 +66,7 @@ def chat():
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
+
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
