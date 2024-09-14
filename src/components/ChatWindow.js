@@ -1,3 +1,5 @@
+let eventSource = null;  // Declare the eventSource variable globally so it can be reset
+
 const handleSendMessage = async (message) => {
   if (!apiKey) {
     setApiKey(message);
@@ -8,6 +10,12 @@ const handleSendMessage = async (message) => {
     setMessages([...messages, { role: 'assistant', content: 'Please upload the transcript for the video to proceed.' }]);
   } else {
     try {
+      // Close any previous EventSource connection before starting a new one
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;  // Reset the eventSource to ensure a new connection can be made
+      }
+
       // Step 1: Send the message and transcript to the backend via POST
       const response = await axios.post('http://localhost:5000/api/send-message', {
         message: message,
@@ -16,21 +24,54 @@ const handleSendMessage = async (message) => {
 
       // Step 2: Only after the POST request succeeds, start the EventSource for SSE
       if (response.data.success) {
-        let assistantResponse = ''; // Variable to store the assistant's response incrementally
+        let assistantResponse = '';  // Reset the assistant response for the new message
 
         // Add the user message to the chat
         setMessages((prevMessages) => [
           ...prevMessages, 
           { role: 'user', content: message },  // User's message stays in its own box
-          { role: 'assistant', content: '...' } // Create a single assistant message box
+          { role: 'assistant', content: '...' }  // Create a single assistant message box
         ]);
 
-        const eventSource = new EventSource('http://localhost:5000/api/chat');
+        // Initialize a new EventSource connection for the current question
+        eventSource = new EventSource('http://localhost:5000/api/chat');
 
         // Listen to messages being sent chunk by chunk
         eventSource.onmessage = (event) => {
           console.log("Received data:", event.data);
-          assistantResponse += event.data; // Append new chunk to the assistant's response
+          assistantResponse += event.data;  // Append new chunk to the assistant's response
+
+          // Update the assistant's message content in the chat
+          setMessages((prevMessages) => 
+            prevMessages.map((msg, idx) => 
+              msg.role === 'assistant' ? { ...msg, content: assistantResponse } : msg
+            )
+          );
+
+          // Close the EventSource once the full response is received (based on the final chunk marker)
+          if (event.data.includes("final_chunk_marker")) {  // Modify this condition based on your backend logic
+            eventSource.close();
+          }
+        };
+
+        // Handle errors in the EventSource connection
+        eventSource.onerror = (err) => {
+          console.error("EventSource error:", err);
+          setMessages((prevMessages) => 
+            prevMessages.map((msg, idx) => 
+              msg.role === 'assistant' ? { ...msg, content: 'Error occurred while fetching response.' } : msg
+            )
+          );
+          eventSource.close();
+        };
+      }
+
+    } catch (error) {
+      console.error("Error fetching response from the backend:", error);
+      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
+    }
+  }
+};
 
           // Update the assistant's message content in the chat
           setMessages((prevMessages) => 
