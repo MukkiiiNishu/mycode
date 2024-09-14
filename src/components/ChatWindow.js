@@ -1,30 +1,37 @@
-let eventSource = null;  // Declare the eventSource variable globally so it can be reset
+let eventSource = null;  // Global variable to track the current EventSource connection
 
 const handleSendMessage = async (message) => {
   if (!apiKey) {
+    console.log("API key is not set, setting API key.");
     setApiKey(message);
     setMessages([...messages, { role: 'assistant', content: 'OpenAI API key set successfully. Now you can ask your questions!' }]);
   } else if (!videoSrc) {
+    console.log("No video source available.");
     setMessages([...messages, { role: 'assistant', content: 'Please upload a video first to start the conversation.' }]);
   } else if (!transcript) {
+    console.log("No transcript available.");
     setMessages([...messages, { role: 'assistant', content: 'Please upload the transcript for the video to proceed.' }]);
   } else {
     try {
-      // Close any previous EventSource connection before starting a new one
+      // Step 1: Ensure any existing EventSource connection is fully closed
       if (eventSource) {
+        console.log("Closing existing EventSource connection before starting a new one.");
         eventSource.close();
-        eventSource = null;  // Reset the eventSource to ensure a new connection can be made
+        eventSource = null;  // Reset the eventSource to null
       }
 
-      // Step 1: Send the message and transcript to the backend via POST
+      console.log("Sending POST request to backend with message:", message);
+
+      // Step 2: Send the message and transcript to the backend via POST
       const response = await axios.post('http://localhost:5000/api/send-message', {
         message: message,
         transcript: transcript
       });
 
-      // Step 2: Only after the POST request succeeds, start the EventSource for SSE
       if (response.data.success) {
-        let assistantResponse = '';  // Reset the assistant response for the new message
+        console.log("POST request successful, initializing new EventSource.");
+
+        let assistantResponse = '';  // Reset the assistant's response for the new message
 
         // Add the user message to the chat
         setMessages((prevMessages) => [
@@ -33,81 +40,50 @@ const handleSendMessage = async (message) => {
           { role: 'assistant', content: '...' }  // Create a single assistant message box
         ]);
 
-        // Initialize a new EventSource connection for the current question
+        // Step 3: Initialize a new EventSource connection for the current question
         eventSource = new EventSource('http://localhost:5000/api/chat');
 
         // Listen to messages being sent chunk by chunk
         eventSource.onmessage = (event) => {
-          console.log("Received data:", event.data);
+          console.log("Received chunk of data from EventSource:", event.data);
           assistantResponse += event.data;  // Append new chunk to the assistant's response
 
           // Update the assistant's message content in the chat
           setMessages((prevMessages) => 
-            prevMessages.map((msg, idx) => 
-              msg.role === 'assistant' ? { ...msg, content: assistantResponse } : msg
+            prevMessages.map((msg) => 
+              msg.role === 'assistant' ? { ...msg, content: assistantResponse.replace(/\n/g, "<br />") } : msg
             )
           );
 
-          // Close the EventSource once the full response is received (based on the final chunk marker)
-          if (event.data.includes("final_chunk_marker")) {  // Modify this condition based on your backend logic
-            eventSource.close();
+          // Close the EventSource once the full response is received (using a final chunk marker)
+          if (event.data.includes("final_chunk_marker")) {
+            console.log("Final chunk marker detected. Closing EventSource.");
+            eventSource.close();  // Close the connection after receiving the full response
+            eventSource = null;  // Reset eventSource for the next question
           }
         };
 
         // Handle errors in the EventSource connection
         eventSource.onerror = (err) => {
-          console.error("EventSource error:", err);
+          console.error("Error in EventSource connection:", err);
           setMessages((prevMessages) => 
-            prevMessages.map((msg, idx) => 
+            prevMessages.map((msg) => 
               msg.role === 'assistant' ? { ...msg, content: 'Error occurred while fetching response.' } : msg
             )
           );
           eventSource.close();
+          eventSource = null;  // Reset eventSource after an error
         };
+      } else {
+        console.log("POST request failed.");
       }
 
     } catch (error) {
-      console.error("Error fetching response from the backend:", error);
+      console.error("Error during POST request or EventSource initialization:", error);
       setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
     }
   }
 };
-
-          // Update the assistant's message content in the chat
-          setMessages((prevMessages) => 
-            prevMessages.map((msg, idx) => 
-              msg.role === 'assistant' ? { ...msg, content: assistantResponse } : msg
-            )
-          );
-
-          // Check if the response is complete (you might need to define how completion is detected)
-          if (event.data.includes("final_chunk_marker")) {  // You may want to modify this condition
-            eventSource.close();  // Stop receiving new messages
-          }
-        };
-
-        // Handle errors in the EventSource connection
-        eventSource.onerror = (err) => {
-          console.error("EventSource error:", err);
-          setMessages((prevMessages) => 
-            prevMessages.map((msg, idx) => 
-              msg.role === 'assistant' ? { ...msg, content: 'Error occurred while fetching response.' } : msg
-            )
-          );
-          eventSource.close();
-        };
-      }
-
-    } catch (error) {
-      console.error("Error fetching response from the backend:", error);
-      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
-    }
-  }
-};
-
-
-
-
 
 
 
