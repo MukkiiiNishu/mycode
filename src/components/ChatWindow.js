@@ -12,6 +12,79 @@ const handleSendMessage = async (message) => {
       const response = await axios.post('http://localhost:5000/api/send-message', {
         message: message,
         transcript: transcript
+      });
+
+      // Step 2: Only after the POST request succeeds, start the EventSource for SSE
+      if (response.data.success) {
+        let assistantResponse = ''; // Variable to store the assistant's response incrementally
+
+        // Add the user message to the chat
+        setMessages((prevMessages) => [
+          ...prevMessages, 
+          { role: 'user', content: message },  // User's message stays in its own box
+          { role: 'assistant', content: '...' } // Create a single assistant message box
+        ]);
+
+        const eventSource = new EventSource('http://localhost:5000/api/chat');
+
+        // Listen to messages being sent chunk by chunk
+        eventSource.onmessage = (event) => {
+          console.log("Received data:", event.data);
+          assistantResponse += event.data; // Append new chunk to the assistant's response
+
+          // Update the assistant's message content in the chat
+          setMessages((prevMessages) => 
+            prevMessages.map((msg, idx) => 
+              msg.role === 'assistant' ? { ...msg, content: assistantResponse } : msg
+            )
+          );
+
+          // Check if the response is complete (you might need to define how completion is detected)
+          if (event.data.includes("final_chunk_marker")) {  // You may want to modify this condition
+            eventSource.close();  // Stop receiving new messages
+          }
+        };
+
+        // Handle errors in the EventSource connection
+        eventSource.onerror = (err) => {
+          console.error("EventSource error:", err);
+          setMessages((prevMessages) => 
+            prevMessages.map((msg, idx) => 
+              msg.role === 'assistant' ? { ...msg, content: 'Error occurred while fetching response.' } : msg
+            )
+          );
+          eventSource.close();
+        };
+      }
+
+    } catch (error) {
+      console.error("Error fetching response from the backend:", error);
+      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
+    }
+  }
+};
+
+
+
+
+
+
+
+
+const handleSendMessage = async (message) => {
+  if (!apiKey) {
+    setApiKey(message);
+    setMessages([...messages, { role: 'assistant', content: 'OpenAI API key set successfully. Now you can ask your questions!' }]);
+  } else if (!videoSrc) {
+    setMessages([...messages, { role: 'assistant', content: 'Please upload a video first to start the conversation.' }]);
+  } else if (!transcript) {
+    setMessages([...messages, { role: 'assistant', content: 'Please upload the transcript for the video to proceed.' }]);
+  } else {
+    try {
+      // Step 1: Send the message and transcript to the backend via POST
+      const response = await axios.post('http://localhost:5000/api/send-message', {
+        message: message,
+        transcript: transcript
       }, {
         withCredentials: true  // Ensure cookies are sent with the request
       });
