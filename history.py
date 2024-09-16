@@ -1,3 +1,83 @@
+import openai
+
+# Function to convert chat prompt list into a formatted string
+def format_chat_prompt(chat_prompt_template):
+    formatted_prompt = ""
+    
+    for message in chat_prompt_template:
+        role = message['role'].capitalize()  # 'user' becomes 'User', 'assistant' becomes 'Assistant'
+        content = message['content']
+        formatted_prompt += f"{role}: {content}\n"
+    
+    return formatted_prompt
+
+# Example function to interact with OpenAI API
+def get_openai_response(chat_prompt_template):
+    # Convert the prompt template into a string
+    formatted_prompt = format_chat_prompt(chat_prompt_template)
+    
+    # OpenAI API call
+    response = openai.Completion.create(
+        engine="text-davinci-003",  # Use the appropriate engine
+        prompt=formatted_prompt,
+        max_tokens=150
+    )
+    
+    return response.choices[0].text.strip()
+
+# Simulating the chat flow
+@app.route('/api/chat', methods=['GET'])
+def chat():
+    session_id = session.get('session_id', str(time.time()))  # Unique session identifier
+    session['session_id'] = session_id  # Store session ID for this user
+
+    global_message = request.args.get('message', '')
+    global_transcript = request.args.get('transcript', '')
+
+    if not global_message or not global_transcript:
+        return jsonify({"error": "Message and transcript are missing."}), 400
+
+    # Get the updated chat prompt with the new transcript and user message
+    chat_prompt_template = get_chat_prompt_template(session_id, global_transcript, global_message)
+
+    # Format the chat prompt into a string to send to OpenAI
+    formatted_prompt = format_chat_prompt(chat_prompt_template)
+
+    # Simulating sending the prompt to OpenAI API and getting a response
+    openai_response = get_openai_response(chat_prompt_template)
+
+    # Add user message and OpenAI response to the database
+    add_message_to_db(session_id, 'user', global_message)
+    add_message_to_db(session_id, 'assistant', openai_response)
+
+    def generate_response():
+        try:
+            # Send OpenAI response back in chunks
+            response_chunks = [openai_response]
+            for i, chunk in enumerate(response_chunks):
+                yield f"data: {chunk}\n\n"
+
+            # Send a final marker indicating the end of the response
+            yield f"data: final_chunk_marker\n\n"
+        except Exception as e:
+            yield f"data: Error occurred: {str(e)}\n\n"
+
+    return Response(stream_with_context(generate_response()), mimetype='text/event-stream')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 from flask import Flask, jsonify, request, Response, session, stream_with_context
 import time
