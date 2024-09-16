@@ -19,3 +19,47 @@ function ClearButton({ onClick }) {
 }
 
 export default ClearButton;
+
+
+const handleClearChat = async () => {
+  try {
+    // Make a POST request to the backend to clear the chat
+    const response = await fetch('/api/allclearchat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ clear: true }),
+    });
+
+    if (response.ok) {
+      setMessages([]); // Clear the frontend chat
+    } else {
+      console.error('Failed to clear chat on the backend.');
+    }
+  } catch (error) {
+    console.error('Error clearing chat:', error);
+  }
+};
+
+const handleNewChat = async () => {
+  try {
+    // Make a POST request to the backend to clear the chat
+    const response = await fetch('/api/allclearchat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ clear: true }),
+    });
+
+    if (response.ok) {
+      setMessages([]); // Clear the frontend chat
+      setApiKey('');   // Reset the API key
+    } else {
+      console.error('Failed to clear chat on the backend.');
+    }
+  } catch (error) {
+    console.error('Error clearing chat:', error);
+  }
+};
