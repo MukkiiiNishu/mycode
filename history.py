@@ -1,3 +1,147 @@
+from flask import Flask, jsonify, request, Response, stream_with_context
+import time
+import openai
+import mysql.connector
+
+app = Flask(__name__)
+
+# MySQL connection configuration
+db_config = {
+    'user': 'your_mysql_username',
+    'password': 'your_mysql_password',
+    'host': 'localhost',
+    'database': 'learning_assistant_db'
+}
+
+# Initialize the MySQL connection
+def get_db_connection():
+    return mysql.connector.connect(**db_config)
+
+# Function to add a message to the conversation history
+def add_message_to_db(username, role, content):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    query = "INSERT INTO conversation_history (username, sender, message) VALUES (%s, %s, %s)"
+    cursor.execute(query, (username, role, content))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+# Function to retrieve the conversation history for a username
+def get_history_from_db(username):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    query = "SELECT sender, message FROM conversation_history WHERE username = %s ORDER BY timestamp"
+    cursor.execute(query, (username,))
+    history = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    return history
+
+# Function to clear conversation history for a username
+def clear_history_in_db(username):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    query = "DELETE FROM conversation_history WHERE username = %s"
+    cursor.execute(query, (username,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+# Function to convert chat prompt list into a formatted string
+def format_chat_prompt(chat_prompt_template):
+    formatted_prompt = ""
+    for message in chat_prompt_template:
+        role = message['role'].capitalize()  # 'user' becomes 'User', 'assistant' becomes 'Assistant'
+        content = message['content']
+        formatted_prompt += f"{role}: {content}\n"
+    return formatted_prompt
+
+# Example function to interact with OpenAI API
+def get_openai_response(chat_prompt_template):
+    # Convert the prompt template into a string
+    formatted_prompt = format_chat_prompt(chat_prompt_template)
+    
+    # OpenAI API call
+    response = openai.Completion.create(
+        engine="text-davinci-003",  # Use the appropriate engine
+        prompt=formatted_prompt,
+        max_tokens=150
+    )
+    
+    return response.choices[0].text.strip()
+
+# Simulating the chat flow
+@app.route('/api/chat', methods=['GET'])
+def chat():
+    # Get the username, message, and transcript from the request
+    username = request.args.get('username', '')
+    global_message = request.args.get('message', '')
+    global_transcript = request.args.get('transcript', '')
+
+    if not username or not global_message or not global_transcript:
+        return jsonify({"error": "Username, message, and transcript are required."}), 400
+
+    # Get the updated chat prompt with the new transcript and user message
+    chat_prompt_template = get_chat_prompt_template(username, global_transcript, global_message)
+
+    # Format the chat prompt into a string to send to OpenAI
+    formatted_prompt = format_chat_prompt(chat_prompt_template)
+
+    # Simulating sending the prompt to OpenAI API and getting a response
+    openai_response = get_openai_response(chat_prompt_template)
+
+    # Add user message and OpenAI response to the database
+    add_message_to_db(username, 'user', global_message)
+    add_message_to_db(username, 'assistant', openai_response)
+
+    def generate_response():
+        try:
+            # Send OpenAI response back in chunks
+            response_chunks = [openai_response]
+            for i, chunk in enumerate(response_chunks):
+                yield f"data: {chunk}\n\n"
+
+            # Send a final marker indicating the end of the response
+            yield f"data: final_chunk_marker\n\n"
+        except Exception as e:
+            yield f"data: Error occurred: {str(e)}\n\n"
+
+    return Response(stream_with_context(generate_response()), mimetype='text/event-stream')
+
+# Route to clear chat history for a specific username
+@app.route('/api/allclearchat', methods=['POST'])
+def clear_chat():
+    data = request.get_json()
+    username = data.get('username', '')
+
+    if not username:
+        return jsonify({"error": "Username is required."}), 400
+
+    if data.get('clear', False):
+        clear_history_in_db(username)  # Clear history in the database for this username
+        return jsonify({"message": f"Chat history for {username} cleared."}), 200
+    else:
+        return jsonify({"error": "Invalid request."}), 400
+
+# Route to fetch chat history (optional, for debugging or displaying history)
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    username = request.args.get('username', '')
+    
+    if not username:
+        return jsonify({"error": "Username is required."}), 400
+    
+    history = get_history_from_db(username)
+    return jsonify(history), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+
+
 from flask import Flask, jsonify, request, Response, session, stream_with_context
 import time
 import openai
