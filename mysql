@@ -1,3 +1,5 @@
+ALTER TABLE conversation_history ADD username VARCHAR(255) NOT NULL;
+
 USE learning_assistant_db;
 
 CREATE TABLE conversation_history (
