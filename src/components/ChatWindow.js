@@ -1,3 +1,223 @@
+import React, { useState, useEffect, useRef } from 'react';
+import styled from 'styled-components';
+
+const ChatContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  background-color: #f7f7f8;
+  font-family: 'Inter', sans-serif;
+`;
+
+const MessagesWrapper = styled.div`
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const MessageContainer = styled.div`
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  position: relative;
+
+  &:hover .copy-button {
+    display: block;
+  }
+`;
+
+const MessageContent = styled.div`
+  max-width: 75%;
+  padding: 12px 15px;
+  border-radius: 8px;
+  background-color: ${({ role }) => (role === 'user' ? '#ececf1' : '#ffffff')}; /* User msg: light gray, Assistant: white */
+  color: ${({ role }) => (role === 'user' ? '#1a1a1b' : '#1a1a1b')}; /* Dark gray for both */
+  font-size: 16px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  box-shadow: ${({ role }) => (role === 'user' ? '0px 2px 4px rgba(0, 0, 0, 0.1)' : '0px 2px 4px rgba(0, 0, 0, 0.05)')};
+  position: relative;
+`;
+
+const Avatar = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 15px;
+`;
+
+const InputContainer = styled.div`
+  padding: 20px;
+  background-color: #ffffff;
+  border-top: 1px solid #eaeaea;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  box-shadow: 0px -1px 4px rgba(0, 0, 0, 0.05);
+`;
+
+const Input = styled.input`
+  flex-grow: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-right: 10px;
+  width: 100%;
+`;
+
+const SendButton = styled.button`
+  background-color: #007bff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 5px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+
+  &:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+`;
+
+const SystemMessage = styled.div`
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: 500;
+`;
+
+const CopyButton = styled.button`
+  display: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #007bff;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const ChatWindow = () => {
+  const [messages, setMessages] = useState([
+    { role: 'system', content: 'This is for learning purposes. Use it wisely, and hope you enjoy using this tool!' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // Scroll to the bottom of the chat when messages update
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const userAvatar = 'path_to_user_avatar.png'; // Replace with actual user avatar path
+  const assistantAvatar = 'path_to_assistant_avatar.png'; // Replace with actual assistant avatar path
+
+  const handleSendMessage = async (messageContent) => {
+    if (messageContent.trim() === "") return;
+
+    try {
+      const newMessages = [...messages, { role: 'user', content: messageContent }];
+      setMessages(newMessages);
+
+      // Simulating assistant response (replace with actual API call)
+      const assistantResponse = "This is a response from the assistant.";
+      setMessages([...newMessages, { role: 'assistant', content: assistantResponse }]);
+    } catch (error) {
+      console.error("Error during message sending:", error);
+      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
+    }
+
+    setInputMessage(''); // Clear input after sending the message
+  };
+
+  const handleInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSendMessage(inputMessage);
+    }
+  };
+
+  // Copy message content to clipboard
+  const handleCopyMessage = (messageContent) => {
+    navigator.clipboard.writeText(messageContent)
+      .then(() => {
+        alert("Message copied to clipboard!"); // Optional confirmation (can replace with a toast message)
+      })
+      .catch((err) => {
+        console.error("Failed to copy message", err);
+      });
+  };
+
+  return (
+    <ChatContainer>
+      {/* Chat messages */}
+      <MessagesWrapper>
+        {/* System message */}
+        <SystemMessage>
+          This is for learning purposes. Use it wisely, and hope you enjoy using this tool!
+        </SystemMessage>
+
+        {/* Render chat messages */}
+        {messages.slice(1).map((msg, index) => (
+          <MessageContainer key={index}>
+            <Avatar src={msg.role === 'user' ? userAvatar : assistantAvatar} alt={`${msg.role}-avatar`} />
+            <MessageContent role={msg.role}>
+              <span dangerouslySetInnerHTML={{ __html: msg.content }} />
+            </MessageContent>
+            <CopyButton className="copy-button" onClick={() => handleCopyMessage(msg.content)}>
+              Copy
+            </CopyButton>
+          </MessageContainer>
+        ))}
+
+        {/* Dummy div to ensure scroll stays at the bottom */}
+        <div ref={messagesEndRef} />
+      </MessagesWrapper>
+
+      {/* Input field with Send Button */}
+      <InputContainer>
+        <Input
+          type="text"
+          placeholder="Type your message here..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyPress={handleInputKeyPress}
+        />
+        <SendButton onClick={() => handleSendMessage(inputMessage)} disabled={!inputMessage.trim()}>
+          Send
+        </SendButton>
+      </InputContainer>
+    </ChatContainer>
+  );
+};
+
+export default ChatWindow;
+
+
+
+
+
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
