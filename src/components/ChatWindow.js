@@ -1,3 +1,50 @@
+date : 19th sept
+
+const ChatContainer = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column-reverse; /* Messages appear from bottom to top */
+  background-color: #f7f7f7;
+  border-radius: 10px;
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 50vh; /* Ensure the chat container occupies 50% of the screen */
+  margin-bottom: 20px;
+`;
+
+const Message = styled.div`
+  word-wrap: break-word; /* Break long words */
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background-color: ${({ role }) => (role === 'user' ? '#0056b3' : '#e0e0e0')}; /* Improved contrast for user message */
+  color: ${({ role }) => (role === 'user' ? '#fff' : '#333')};
+  align-self: ${({ role }) => (role === 'user' ? 'flex-end' : 'flex-start')};
+  max-width: 70%; /* Prevent overflow, limit message width */
+`;
+
+const Input = styled.input`
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: calc(100% - 22px);
+  position: sticky; /* Fix the input box at the bottom */
+  bottom: 0;
+  background-color: #fff;
+  box-shadow: 0px -1px 5px rgba(0, 0, 0, 0.1); /* Slight shadow for visibility */
+`;
+
+const ChatWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Ensure the entire screen is used */
+  justify-content: flex-end; /* Keep the input box at the bottom */
+`;
+
+
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 
