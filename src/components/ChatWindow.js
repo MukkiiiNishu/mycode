@@ -1,3 +1,137 @@
+import React, { useState } from 'react';
+import styled from 'styled-components';
+
+const ChatContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px;
+  background-color: #f7f7f8;
+  overflow-y: auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+`;
+
+const MessageContainer = styled.div`
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 15px;
+`;
+
+const MessageContent = styled.div`
+  max-width: 80%;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: ${({ role }) => (role === 'user' ? '#d1e7ff' : '#e9e9e9')};
+  color: ${({ role }) => (role === 'user' ? '#0d6efd' : '#333')};
+  font-size: 15px;
+  line-height: 1.5;
+`;
+
+const Avatar = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+`;
+
+const InputContainer = styled.div`
+  margin-top: auto;
+  display: flex;
+`;
+
+const Input = styled.input`
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  font-size: 15px;
+  margin-top: 10px;
+`;
+
+const SystemMessage = styled.div`
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 20px;
+`;
+
+const ChatWindow = () => {
+  const [messages, setMessages] = useState([
+    { role: 'system', content: 'This is for learning purposes. Use it wisely, and hope you enjoy using this tool!' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+
+  const userAvatar = 'path_to_user_avatar.png'; // Replace with the actual path or URL
+  const assistantAvatar = 'path_to_assistant_avatar.png'; // Replace with the actual path or URL
+
+  const handleSendMessage = async (messageContent) => {
+    try {
+      const newMessages = [...messages, { role: 'user', content: messageContent }];
+      setMessages(newMessages);
+
+      // Simulating assistant response (replace with actual API call)
+      const assistantResponse = "This is a dummy response from the assistant.";
+      setMessages([...newMessages, { role: 'assistant', content: assistantResponse }]);
+
+    } catch (error) {
+      console.error("Error during POST request or EventSource initialization:", error);
+      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
+    }
+  };
+
+  const handleInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const trimmedMessage = inputMessage.trim();
+      if (trimmedMessage) {
+        handleSendMessage(trimmedMessage);
+        setInputMessage(''); // Clear input after sending the message
+      }
+    }
+  };
+
+  return (
+    <ChatContainer>
+      {/* System message */}
+      <SystemMessage>
+        This is for learning purposes. Use it wisely, and hope you enjoy using this tool!
+      </SystemMessage>
+
+      {/* Render chat messages */}
+      {messages.slice(1).map((msg, index) => (
+        <MessageContainer key={index}>
+          <Avatar
+            src={msg.role === 'user' ? userAvatar : assistantAvatar}
+            alt={`${msg.role}-avatar`}
+          />
+          <MessageContent role={msg.role}>
+            <span dangerouslySetInnerHTML={{ __html: msg.content }} />
+          </MessageContent>
+        </MessageContainer>
+      ))}
+
+      {/* Input field */}
+      <InputContainer>
+        <Input
+          type="text"
+          placeholder="Type your message here..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyPress={handleInputKeyPress}
+        />
+      </InputContainer>
+    </ChatContainer>
+  );
+};
+
+export default ChatWindow;
+
+
+
+
+
+
+
 let eventSource = null;  // Global variable to track the current EventSource connection
 
 const ChatWindow = ({ videoSrc, transcript, messages, setMessages, apiKey, setApiKey }) => {
