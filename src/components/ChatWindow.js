@@ -1,3 +1,238 @@
+
+/* Global chat container */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  max-width: 900px;
+  margin: auto;
+  font-family: 'Roboto', sans-serif;
+  background-color: #f4f6f9;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+/* Message area */
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px 10px 0 0;
+}
+
+/* Message box container */
+.message-box {
+  display: flex;
+  align-items: flex-start;
+  margin: 10px 0;
+}
+
+/* User message container */
+.message-box.user {
+  justify-content: flex-end;
+}
+
+/* Assistant message container */
+.message-box.assistant {
+  justify-content: flex-start;
+}
+
+/* Avatar styles */
+.message-box .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+/* User and assistant message bubbles */
+.message-box .message-content {
+  padding: 15px;
+  font-size: 15px;
+  border-radius: 15px;
+  max-width: 70%;
+  word-wrap: break-word;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Styling for user's message */
+.message-box.user .message-content {
+  background-color: #e0f7fa;
+  color: #004d40;
+  border-bottom-right-radius: 0;
+}
+
+/* Styling for assistant's message */
+.message-box.assistant .message-content {
+  background-color: #eeeeee;
+  color: #424242;
+  border-bottom-left-radius: 0;
+}
+
+/* Input container */
+.chat-input-container {
+  display: flex;
+  padding: 15px;
+  background-color: #f4f6f9;
+  border-top: 1px solid #e0e0e0;
+  border-radius: 0 0 10px 10px;
+}
+
+/* Chat input styling */
+.chat-input-container input[type="text"] {
+  flex-grow: 1;
+  padding: 10px 15px;
+  font-size: 16px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Send button styling */
+.chat-input-container button {
+  margin-left: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 20px;
+  background-color: #1976d2;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.chat-input-container button:hover {
+  background-color: #1565c0;
+}
+
+/* New Chat and Clear Chat buttons */
+.chat-buttons {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #f4f6f9;
+}
+
+.chat-buttons .button {
+  padding: 10px 20px;
+  background-color: #1976d2;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.chat-buttons .button:hover {
+  background-color: #1565c0;
+}
+
+
+import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+
+const ChatWindow = () => {
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  let eventSource = null;
+  let assistantResponse = '';
+
+  // Function to handle sending a message
+  const handleSendMessage = async (message) => {
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { role: 'user', content: message },  // User's message stays in its own box
+      { role: 'assistant', content: '...' }  // Create a single assistant message box with placeholder
+    ]);
+
+    try {
+      // Initialize the EventSource connection for streaming assistant response
+      eventSource = new EventSource('http://localhost:5000/api/chat');
+
+      eventSource.onmessage = (event) => {
+        console.log("Received chunk of data from EventSource:", event.data);
+        assistantResponse += event.data;  // Append new chunk to the assistant's response
+
+        // Update the assistant's message content in the chat using ReactMarkdown
+        setMessages((prevMessages) => 
+          prevMessages.map((msg) => 
+            msg.role === 'assistant' ? { ...msg, content: assistantResponse } : msg
+          )
+        );
+
+        // Close the EventSource once the full response is received (using a final chunk marker)
+        if (event.data.includes("final_chunk_marker")) {
+          console.log("Final chunk marker detected. Closing EventSource.");
+          eventSource.close();  // Close the connection after receiving the full response
+          eventSource = null;  // Reset eventSource for the next question
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("Error in EventSource connection:", err);
+        setMessages((prevMessages) => 
+          prevMessages.map((msg) => 
+            msg.role === 'assistant' ? { ...msg, content: 'Error occurred while fetching response.' } : msg
+          )
+        );
+        eventSource.close();
+        eventSource = null;  // Reset eventSource after an error
+      };
+
+    } catch (error) {
+      console.error("Error during POST request or EventSource initialization:", error);
+      setMessages([...messages, { role: 'assistant', content: 'Sorry, something went wrong while fetching the response.' }]);
+    }
+  };
+
+  // Handle Enter keypress to send message
+  const handleInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const trimmedMessage = inputMessage.trim();
+      if (trimmedMessage) {
+        handleSendMessage(trimmedMessage);
+        setInputMessage('');  // Clear input after sending the message
+      }
+    }
+  };
+
+  return (
+    <div className="chat-container">
+      <div className="chat-messages">
+        {messages.map((msg, index) => (
+          <div className={`message-box ${msg.role}`} key={index}>
+            <div className="avatar">
+              <img src={msg.role === 'user' ? 'path-to-user-avatar.png' : 'path-to-assistant-avatar.png'} alt="avatar" />
+            </div>
+            <div className="message-content">
+              {/* Use ReactMarkdown to render markdown content */}
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="chat-input-container">
+        <input
+          type="text"
+          placeholder="Type your message here..."
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyPress={handleInputKeyPress}
+        />
+        <button onClick={() => handleSendMessage(inputMessage)}>Send</button>
+      </div>
+    </div>
+  );
+};
+
+export default ChatWindow;
+
+
+
 date : 19th sept
 
 const ChatContainer = styled.div`
