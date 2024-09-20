@@ -1,3 +1,58 @@
+import React, { useRef } from 'react';
+import { Input, Button } from '@mui/material'; // Using Material UI for Input and Button
+
+const ChatWindow = React.forwardRef((props, ref) => {
+  const chatEndRef = useRef(null);
+
+  const handleSendMessage = (message) => {
+    // Your logic to handle sending the message
+  };
+
+  return (
+    <ChatContainer>
+      {/* Chat messages go here */}
+      <div ref={chatEndRef} /> {/* This div keeps track of the chat's end */}
+
+      <div style={{ position: 'relative', width: '100%' }}>
+        <Input
+          placeholder={apiKey ? "Type your message here..." : "Please enter your OpenAI API key..."}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSendMessage(e.target.value);
+              e.target.value = ''; // Clear input after sending
+            }
+          }}
+          style={{ width: '100%', paddingRight: '40px' }} // Add space for the send button
+        />
+        <Button
+          onClick={() => {
+            const inputElement = document.querySelector('input'); // Assuming there's only one input
+            handleSendMessage(inputElement.value);
+            inputElement.value = ''; // Clear input after sending
+          }}
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            minWidth: '30px',
+            height: '30px',
+            padding: 0,
+          }}
+        >
+          {/* Placeholder for the send icon */}
+          <img src="send-icon-placeholder.png" alt="Send" style={{ width: '20px', height: '20px' }} />
+        </Button>
+      </div>
+    </ChatContainer>
+  );
+});
+
+export default ChatWindow;
+
+
+
+
 
 /* Global chat container */
 .chat-container {
