@@ -1,3 +1,141 @@
+latest 14 Dec
+
+import os
+import uuid
+from flask import Flask, request, jsonify, session
+from flask_session import Session
+from datetime import timedelta
+import redis
+from rq import Queue
+import threading
+import time
+
+app = Flask(__name__)
+
+# Flask session configuration
+app.secret_key = os.urandom(24)
+app.config['SESSION_TYPE'] = 'redis'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_KEY_PREFIX'] = 'flask:'
+app.config['SESSION_REDIS'] = redis.StrictRedis(host='localhost', port=6379, db=0)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)
+
+Session(app)
+
+# Redis queue setup for parallel task handling
+redis_conn = redis.StrictRedis(host='localhost', port=6379, db=1)
+queue = Queue(connection=redis_conn)
+
+# Function to transcribe audio
+def transcribe_audio(audio_path):
+    # Simulate a transcription process
+    time.sleep(5)  # Mock delay
+    return "Transcribed text from audio"
+
+# Function to process a task (media transcription)
+def process_task(media_id, audio_path, mime_type):
+    transcript = transcribe_audio(audio_path)
+    if transcript:
+        # Store transcript in the database (pseudo-code)
+        query = "INSERT INTO transcripts (media_id, transcript) VALUES (%s, %s)"
+        cursor.execute(query, (media_id, transcript))
+        db.commit()
+
+        # Clean up files
+        os.remove(audio_path)
+        return {"transcript": transcript, "thumbnail": "sample_audio_thumbnail.png" if mime_type.startswith('audio') else None}
+    else:
+        raise Exception("Failed to transcribe audio")
+
+# Media upload endpoint
+@app.route('/api/upload', methods=['POST'])
+def upload_media():
+    media = request.files.get('media')
+    mime_type = media.mimetype if media else None
+
+    if not media:
+        return jsonify({"error": "No media uploaded"}), 400
+
+    # Generate session ID and associate it with the user
+    session_id = session.get("session_id", str(uuid.uuid4()))
+    session["session_id"] = session_id
+
+    media_id = str(uuid.uuid4())
+    media_path = f"uploads/{media_id}"
+
+    if mime_type and mime_type.startswith('video'):
+        audio_path = f"{media_path}.wav"
+        media.save(audio_path)  # Save video and extract audio
+    elif mime_type and mime_type.startswith('audio'):
+        audio_path = f"{media_path}.wav"
+        media.save(audio_path)
+    else:
+        return jsonify({"error": "Unsupported media type"}), 400
+
+    # Enqueue task for processing
+    job = queue.enqueue(process_task, media_id, audio_path, mime_type)
+
+    return jsonify({"message": "Request added to queue", "session_id": session_id, "job_id": job.id})
+
+# Chat endpoint
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.json
+    message = data.get('message')
+    transcript = data.get('transcript')
+
+    if not message or not transcript:
+        return jsonify({"error": "Message and transcript are required."}), 400
+
+    # Generate session ID and associate it with the user
+    session_id = session.get("session_id", str(uuid.uuid4()))
+    session["session_id"] = session_id
+
+    # Prepare conversation context
+    context = f"{transcript}\n\nUser: {message}"
+
+    try:
+        # Call the OpenAI API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": context}
+            ]
+        )
+        assistant_response = response.choices[0].message['content']
+
+        return jsonify({"response": assistant_response, "session_id": session_id})
+    except Exception as e:
+        print(f"Error during OpenAI request: {e}")
+        return jsonify({"error": "Failed to fetch response from OpenAI."}), 500
+
+# Function to clean up old session data
+def clean_up_sessions():
+    while True:
+        time.sleep(3600)  # Run every hour
+        session_store = app.session_interface.redis
+        keys = session_store.keys(f"{app.config['SESSION_KEY_PREFIX']}*")
+        for key in keys:
+            session_store.delete(key)
+
+# Run cleanup in a separate thread
+cleanup_thread = threading.Thread(target=clean_up_sessions)
+cleanup_thread.daemon = True
+cleanup_thread.start()
+
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)
+
+
+
+
+multiple threading and server
+
+
+
+
 laytets date : 26th sept
 from flask import Flask, request, jsonify
 from flask_cors import CORS
